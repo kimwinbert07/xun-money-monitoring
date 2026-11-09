@@ -1,0 +1,882 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>xUn Money Monitoring</title>
+
+<style>
+:root{
+--bg:#09111f;
+--panel:#111e31;
+--line:#243550;
+--blue:#3988ff;
+--muted:#91a3bb;
+--green:#31d69b;
+--red:#ff647c;
+}
+
+*{box-sizing:border-box}
+
+body{
+margin:0;
+background:var(--bg);
+color:#eef4ff;
+font:14px Arial,sans-serif;
+}
+
+header{
+padding:23px 5%;
+background:#101d32;
+border-bottom:1px solid var(--line);
+}
+
+header h1{
+margin:0;
+color:#69a9ff;
+font-size:25px;
+}
+
+header p{
+color:var(--muted);
+margin:7px 0 0;
+}
+
+main{
+max-width:1150px;
+margin:auto;
+padding:24px 18px;
+}
+
+nav{
+display:flex;
+gap:8px;
+flex-wrap:wrap;
+margin-bottom:22px;
+}
+
+button,.btn{
+border:0;
+border-radius:8px;
+padding:11px 15px;
+background:var(--blue);
+color:white;
+cursor:pointer;
+font-weight:bold;
+}
+
+button.secondary{background:#263750}
+button.danger{background:#9c3045}
+button:hover{filter:brightness(1.15)}
+
+.cards{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
+gap:14px;
+margin-bottom:20px;
+}
+
+.card,.panel{
+background:var(--panel);
+border:1px solid var(--line);
+border-radius:12px;
+padding:19px;
+}
+
+.card small,.muted{color:var(--muted)}
+
+.amount{
+font-size:25px;
+font-weight:bold;
+margin-top:12px;
+}
+
+.green{color:var(--green)}
+.red{color:var(--red)}
+.blue{color:#69a9ff}
+
+h2{
+font-size:17px;
+margin:0 0 17px;
+}
+
+.section{margin-top:20px}
+
+input,select{
+background:#0b1728;
+color:white;
+border:1px solid #344863;
+border-radius:7px;
+padding:11px;
+width:100%;
+min-width:0;
+}
+
+label{
+display:block;
+color:var(--muted);
+margin-bottom:6px;
+}
+
+form{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+gap:12px;
+}
+
+.form-actions{
+display:flex;
+gap:8px;
+align-items:end;
+flex-wrap:wrap;
+}
+
+table{
+width:100%;
+border-collapse:collapse;
+min-width:600px;
+}
+
+th,td{
+text-align:left;
+padding:13px 10px;
+border-bottom:1px solid var(--line);
+}
+
+th{
+color:var(--muted);
+font-size:12px;
+}
+
+.table-wrap{overflow-x:auto}
+
+.toolbar{
+display:flex;
+gap:10px;
+flex-wrap:wrap;
+margin-bottom:15px;
+}
+
+.toolbar>*{
+flex:1;
+min-width:150px;
+}
+
+footer{
+text-align:center;
+color:var(--muted);
+padding:30px;
+}
+
+.hidden{display:none!important}
+
+.starting-box{
+display:flex;
+gap:10px;
+align-items:end;
+flex-wrap:wrap;
+}
+
+.starting-box>div{
+flex:1;
+min-width:180px;
+}
+
+@media(max-width:500px){
+.amount{font-size:21px}
+}
+
+@media print{
+body{background:white;color:black}
+header{background:white;color:black}
+nav,.no-print,button{display:none!important}
+.card,.panel{background:white;color:black;border:1px solid #ccc}
+.muted,small{color:#444}
+table{color:black}
+}
+</style>
+</head>
+
+<body>
+
+<header>
+<h1>✦ xUn Money Monitoring</h1>
+<p>Personal Finance Dashboard · Philippine Peso (₱)</p>
+</header>
+
+<main>
+
+<nav class="no-print">
+<button onclick="showPage('dashboard')">Dashboard</button>
+<button class="secondary" onclick="showPage('transactions')">Transactions</button>
+<button class="secondary" onclick="showPage('reports')">Reports</button>
+<button class="secondary" onclick="exportCSV()">Export Excel CSV</button>
+<button class="secondary" onclick="window.print()">Export PDF</button>
+</nav>
+
+<!-- DASHBOARD -->
+
+<section id="dashboard">
+
+<div class="panel no-print">
+<h2>Starting Balance Settings</h2>
+
+<div class="starting-box">
+<div>
+<label>Enter Starting Balance (₱)</label>
+<input
+type="number"
+id="startingInput"
+min="0"
+step="0.01"
+placeholder="e.g. 10000">
+</div>
+
+<div>
+<button onclick="saveStartingBalance()">
+Save Starting Balance
+</button>
+</div>
+</div>
+
+<p class="muted">
+Set your initial money here. This amount is used as
+the starting point for calculating your current balance.
+</p>
+</div>
+
+<div class="toolbar no-print section">
+<div>
+<label>Selected month</label>
+<input type="month" id="month">
+</div>
+</div>
+
+<div class="cards">
+
+<div class="card">
+<small>STARTING BALANCE</small>
+<div id="startingDisplay" class="amount blue">₱0.00</div>
+</div>
+
+<div class="card">
+<small>CURRENT BALANCE</small>
+<div id="currentBalance" class="amount green">₱0.00</div>
+</div>
+
+<div class="card">
+<small>MONTHLY INCOME</small>
+<div id="income" class="amount green">₱0.00</div>
+</div>
+
+<div class="card">
+<small>MONTHLY EXPENSES</small>
+<div id="expenses" class="amount red">₱0.00</div>
+</div>
+
+<div class="card">
+<small>MONTHLY PROFIT / LOSS</small>
+<div id="balance" class="amount blue">₱0.00</div>
+</div>
+
+</div>
+
+<div class="panel">
+<h2>Monthly Transactions</h2>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>Date</th>
+<th>Description</th>
+<th>Category</th>
+<th>Type</th>
+<th>Amount</th>
+</tr>
+</thead>
+<tbody id="recent"></tbody>
+</table>
+</div>
+</div>
+
+</section>
+
+<!-- TRANSACTIONS -->
+
+<section id="transactions" class="hidden">
+
+<div class="panel">
+<h2>Add / Edit Transaction</h2>
+
+<form id="entry">
+
+<input type="hidden" id="editId">
+
+<div>
+<label>Date</label>
+<input type="date" id="date" required>
+</div>
+
+<div>
+<label>Description</label>
+<input id="description" placeholder="e.g. Groceries" required>
+</div>
+
+<div>
+<label>Category</label>
+<select id="category">
+<option>Food</option>
+<option>Transportation</option>
+<option>Bills</option>
+<option>Shopping</option>
+<option>Salary</option>
+<option>Business</option>
+<option>Health</option>
+<option>Education</option>
+<option>Savings</option>
+<option>Other</option>
+</select>
+</div>
+
+<div>
+<label>Transaction type</label>
+<select id="type">
+<option value="Expense">Expense</option>
+<option value="Income">Income</option>
+</select>
+</div>
+
+<div>
+<label>Amount (₱)</label>
+<input type="number" id="amount" min="0.01" step="0.01" required>
+</div>
+
+<div class="form-actions">
+<button type="submit">Save Transaction</button>
+<button type="button" class="secondary" onclick="resetForm()">Clear</button>
+</div>
+
+</form>
+</div>
+
+<div class="panel section">
+
+<h2>Transaction History</h2>
+
+<div class="toolbar">
+<input
+id="search"
+placeholder="Search description or category..."
+oninput="render()">
+
+<select id="filter" onchange="render()">
+<option value="All">All types</option>
+<option>Income</option>
+<option>Expense</option>
+</select>
+</div>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>Date</th>
+<th>Description</th>
+<th>Category</th>
+<th>Type</th>
+<th>Amount</th>
+<th class="no-print">Actions</th>
+</tr>
+</thead>
+<tbody id="history"></tbody>
+</table>
+</div>
+
+</div>
+</section>
+
+<!-- REPORTS -->
+
+<section id="reports" class="hidden">
+
+<div class="panel">
+
+<h2>Yearly Summary</h2>
+
+<div class="toolbar no-print">
+<div>
+<label>Year</label>
+<select id="year"></select>
+</div>
+</div>
+
+<div class="cards">
+
+<div class="card">
+<small>YEARLY INCOME</small>
+<div class="amount green" id="yIncome">₱0.00</div>
+</div>
+
+<div class="card">
+<small>YEARLY EXPENSES</small>
+<div class="amount red" id="yExpenses">₱0.00</div>
+</div>
+
+<div class="card">
+<small>YEARLY PROFIT / LOSS</small>
+<div class="amount blue" id="yBalance">₱0.00</div>
+</div>
+
+</div>
+
+<h2>Monthly Breakdown</h2>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>Month</th>
+<th>Income</th>
+<th>Expenses</th>
+<th>Profit / Loss</th>
+</tr>
+</thead>
+<tbody id="yearTable"></tbody>
+</table>
+</div>
+
+</div>
+</section>
+
+</main>
+
+<footer>
+xUn Money Monitoring · Your finances, organized.
+</footer>
+
+<script>
+
+const KEY='xun_money_records_v1';
+const BALANCE_KEY='xun_starting_balance_v1';
+
+let records=JSON.parse(localStorage.getItem(KEY)||'[]');
+
+let startingBalance=Number(
+localStorage.getItem(BALANCE_KEY)||0
+);
+
+const peso=n=>'₱'+Number(n).toLocaleString('en-PH',{
+minimumFractionDigits:2,
+maximumFractionDigits:2
+});
+
+const el=id=>document.getElementById(id);
+
+const save=()=>{
+localStorage.setItem(KEY,JSON.stringify(records));
+};
+
+const today=new Date().toLocaleDateString('en-CA');
+
+el('date').value=today;
+el('month').value=today.slice(0,7);
+
+el('startingInput').value=startingBalance;
+
+const currentYear=new Date().getFullYear();
+
+for(let y=currentYear-5;y<=currentYear+1;y++){
+
+let o=document.createElement('option');
+
+o.value=y;
+o.textContent=y;
+
+if(y===currentYear)o.selected=true;
+
+el('year').appendChild(o);
+
+}
+
+// PAGE NAVIGATION
+
+function showPage(id){
+
+['dashboard','transactions','reports'].forEach(x=>{
+el(x).classList.toggle('hidden',x!==id);
+});
+
+render();
+
+}
+
+// STARTING BALANCE
+
+function saveStartingBalance(){
+
+const value=Number(el('startingInput').value);
+
+if(!Number.isFinite(value)||value<0){
+alert('Please enter a valid starting balance.');
+return;
+}
+
+startingBalance=value;
+
+localStorage.setItem(
+BALANCE_KEY,
+String(startingBalance)
+);
+
+render();
+
+alert('Starting balance saved successfully!');
+
+}
+
+// RESET FORM
+
+function resetForm(){
+
+el('entry').reset();
+el('editId').value='';
+el('date').value=today;
+
+}
+
+// ADD / EDIT TRANSACTION
+
+el('entry').addEventListener('submit',e=>{
+
+e.preventDefault();
+
+const id=el('editId').value;
+
+const item={
+
+id:id||crypto.randomUUID(),
+
+date:el('date').value,
+
+description:el('description').value.trim(),
+
+category:el('category').value,
+
+type:el('type').value,
+
+amount:Number(el('amount').value)
+
+};
+
+if(!item.amount||item.amount<=0){
+return alert('Enter a valid amount.');
+}
+
+if(id){
+
+records=records.map(x=>x.id===id?item:x);
+
+}else{
+
+records.push(item);
+
+}
+
+save();
+
+resetForm();
+
+render();
+
+alert('Transaction saved!');
+
+});
+
+// EDIT TRANSACTION
+
+function editItem(id){
+
+const x=records.find(r=>r.id===id);
+
+if(!x)return;
+
+el('editId').value=x.id;
+el('date').value=x.date;
+el('description').value=x.description;
+el('category').value=x.category;
+el('type').value=x.type;
+el('amount').value=x.amount;
+
+showPage('transactions');
+
+window.scrollTo(0,0);
+
+}
+
+// DELETE TRANSACTION
+
+function deleteItem(id){
+
+if(confirm('Delete this transaction?')){
+
+records=records.filter(x=>x.id!==id);
+
+save();
+
+render();
+
+}
+
+}
+
+// CALCULATE TOTALS
+
+function totals(list){
+
+return list.reduce((a,x)=>{
+
+a[x.type==='Income'?'income':'expenses']+=Number(x.amount);
+
+return a;
+
+},{income:0,expenses:0});
+
+}
+
+// CURRENT BALANCE
+
+function calculateCurrentBalance(){
+
+const t=totals(records);
+
+return startingBalance+t.income-t.expenses;
+
+}
+
+// TABLE ROW
+
+function row(x,actions=false){
+
+return `<tr>
+
+<td>${escapeHTML(x.date)}</td>
+
+<td>${escapeHTML(x.description)}</td>
+
+<td>${escapeHTML(x.category)}</td>
+
+<td class="${x.type==='Income'?'green':'red'}">${escapeHTML(x.type)}</td>
+
+<td>${peso(x.amount)}</td>
+
+${actions?`
+
+<td class="no-print">
+
+<button onclick="editItem('${x.id}')">Edit</button>
+
+<button class="danger" onclick="deleteItem('${x.id}')">Delete</button>
+
+</td>
+
+`:''}
+
+</tr>`;
+
+}
+
+// HTML PROTECTION
+
+function escapeHTML(s){
+
+return String(s).replace(/[&<>"']/g,c=>({
+'&':'&amp;',
+'<':'&lt;',
+'>':'&gt;',
+'"':'&quot;',
+"'":'&#39;'
+}[c]));
+
+}
+
+// RENDER DASHBOARD AND REPORTS
+
+function render(){
+
+const month=el('month').value;
+
+const list=records.filter(x=>
+x.date.startsWith(month)
+).sort((a,b)=>b.date.localeCompare(a.date));
+
+const t=totals(list);
+
+// STARTING BALANCE DISPLAY
+
+el('startingDisplay').textContent=peso(startingBalance);
+
+// CURRENT BALANCE DISPLAY
+
+const current=calculateCurrentBalance();
+
+el('currentBalance').textContent=
+(current<0?'-':'')+peso(Math.abs(current));
+
+el('currentBalance').className=
+'amount '+(current>=0?'green':'red');
+
+// MONTHLY INCOME AND EXPENSES
+
+el('income').textContent=peso(t.income);
+
+el('expenses').textContent=peso(t.expenses);
+
+// MONTHLY PROFIT / LOSS
+
+const net=t.income-t.expenses;
+
+el('balance').textContent=
+(net>0?'+':net<0?'-':'')+peso(Math.abs(net));
+
+el('balance').className=
+'amount '+(net>=0?'green':'red');
+
+// MONTHLY TRANSACTIONS
+
+el('recent').innerHTML=
+list.map(x=>row(x)).join('')||
+'<tr><td colspan="5">No transactions this month.</td></tr>';
+
+// TRANSACTION HISTORY
+
+const q=el('search').value.toLowerCase();
+
+const f=el('filter').value;
+
+const filtered=records.filter(x=>
+
+(x.description+' '+x.category).toLowerCase().includes(q)&&
+
+(f==='All'||x.type===f)
+
+).sort((a,b)=>b.date.localeCompare(a.date));
+
+el('history').innerHTML=
+filtered.map(x=>row(x,true)).join('')||
+'<tr><td colspan="6">No matching transactions.</td></tr>';
+
+// YEARLY REPORT
+
+const year=String(el('year').value);
+
+const yr=records.filter(x=>x.date.startsWith(year));
+
+const yt=totals(yr);
+
+el('yIncome').textContent=peso(yt.income);
+
+el('yExpenses').textContent=peso(yt.expenses);
+
+const yearlyNet=yt.income-yt.expenses;
+
+el('yBalance').textContent=
+(yearlyNet>0?'+':yearlyNet<0?'-':'')+
+peso(Math.abs(yearlyNet));
+
+el('yBalance').className=
+'amount '+(yearlyNet>=0?'green':'red');
+
+// MONTHLY BREAKDOWN
+
+const names=[
+'January','February','March','April',
+'May','June','July','August',
+'September','October','November','December'
+];
+
+el('yearTable').innerHTML=names.map((n,i)=>{
+
+const key=year+'-'+String(i+1).padStart(2,'0');
+
+const z=totals(
+records.filter(x=>x.date.startsWith(key))
+);
+
+const balance=z.income-z.expenses;
+
+return `<tr>
+
+<td>${n}</td>
+
+<td>${peso(z.income)}</td>
+
+<td>${peso(z.expenses)}</td>
+
+<td class="${balance>=0?'green':'red'}">
+${balance<0?'-':balance>0?'+':''}${peso(Math.abs(balance))}
+</td>
+
+</tr>`;
+
+}).join('');
+
+}
+
+// EXPORT CSV
+
+function exportCSV(){
+
+const rows=[
+
+['Starting Balance',startingBalance],
+
+[],
+
+['Date','Description','Category','Type','Amount (PHP)'],
+
+...records.map(x=>[
+x.date,
+x.description,
+x.category,
+x.type,
+x.amount
+])
+
+];
+
+const csv='\ufeff'+rows.map(r=>
+r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')
+).join('\r\n');
+
+const blob=new Blob([csv],{
+type:'text/csv;charset=utf-8;'
+});
+
+const a=document.createElement('a');
+
+a.href=URL.createObjectURL(blob);
+
+a.download='xUn_Money_Monitoring.csv';
+
+a.click();
+
+URL.revokeObjectURL(a.href);
+
+}
+
+// EVENT LISTENERS
+
+el('month').addEventListener('change',render);
+
+el('year').addEventListener('change',render);
+
+// INITIALIZE
+
+render();
+
+</script>
+
+</body>
+</html>
